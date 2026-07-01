@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">BlankoTech MC Optimizer</string>
+    <string name="btn_optimize">OPTIMIZAR Y JUGAR</string>
+    <string name="status_idle">Dispositivo listo para la optimización</string>
+    <string name="status_wakelock">Adquiriendo WakeLock de CPU (Evita congelamientos)...</string>
+    <string name="status_ram">Limpiando procesos en segundo plano...</string>
+    <string name="status_gamemode">Estableciendo modo rendimiento (GameManager)...</string>
+    <string name="status_launching">Iniciando Minecraft Bedrock Edition...</string>
+    <string name="status_finished">¡Listo! Lanzando juego...</string>
+    <string name="error_not_installed">Error: Minecraft Bedrock Edition no está instalado en este dispositivo.</string>
+    <string name="no_root_banner">⚡ Optimización Segura (No-Root) Activa</string>
+    <string name="ram_cleared_format">Se liberó memoria RAM cerrando %1$d procesos.</string>
+    <string name="game_mode_active">Modo de Rendimiento del sistema activado.</string>
+</resources>
+
