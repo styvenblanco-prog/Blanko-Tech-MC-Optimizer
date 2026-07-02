@@ -247,4 +247,62 @@ class OptimizationEngine {
             Log.e("OptimizationEngine", "Error releasing WakeLock: ${e.message}")
         }
     }
+
+    // --- SHIZUKU FREEZE / RESTORE UTILITIES ---
+
+    private val heavyAppsList = listOf(
+        "com.whatsapp",
+        "com.facebook.katana",
+        "com.instagram.android",
+        "com.android.vending"
+    )
+
+    private fun executeCommand(cmd: String): Boolean {
+        return try {
+            val clazz = Class.forName("rikka.shizuku.Shizuku")
+            val method = clazz.getMethod(
+                "newProcess",
+                Array<String>::class.java,
+                Array<String>::class.java,
+                String::class.java
+            )
+            val process = method.invoke(null, arrayOf("sh", "-c", cmd), null, null) as java.lang.Process
+            val result = process.waitFor()
+            result == 0
+        } catch (e: Throwable) {
+            Log.e("OptimizationEngine", "Failed to execute shell command '$cmd' via Shizuku reflection: ${e.message}", e)
+            false
+        }
+    }
+
+    suspend fun freezeHeavyApps(onProgress: (String) -> Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            for (pkg in heavyAppsList) {
+                try {
+                    onProgress("Congelando $pkg...")
+                    executeCommand("am force-stop $pkg")
+                    executeCommand("cmd appops set $pkg RUN_IN_BACKGROUND ignore")
+                    executeCommand("am set-standby-bucket $pkg restricted")
+                } catch (e: Exception) {
+                    Log.e("OptimizationEngine", "Error freezing $pkg: ${e.message}")
+                }
+            }
+            onProgress("Aplicaciones pesadas congeladas con Shizuku.")
+        }
+    }
+
+    suspend fun restoreHeavyApps(onProgress: (String) -> Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            for (pkg in heavyAppsList) {
+                try {
+                    onProgress("Restaurando $pkg...")
+                    executeCommand("cmd appops set $pkg RUN_IN_BACKGROUND allow")
+                    executeCommand("am set-standby-bucket $pkg default")
+                } catch (e: Exception) {
+                    Log.e("OptimizationEngine", "Error restoring $pkg: ${e.message}")
+                }
+            }
+            onProgress("Aplicaciones restauradas con éxito.")
+        }
+    }
 }

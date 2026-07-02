@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import rikka.shizuku.Shizuku
 
 data class TargetApp(
     val packageName: String,
@@ -34,7 +35,9 @@ data class OptimizerUiState(
     val ramReadable: String = "",
     val isUsagePermissionGranted: Boolean = false,
     val isOverlayPermissionGranted: Boolean = false,
-    val isOverlayActive: Boolean = false
+    val isOverlayActive: Boolean = false,
+    val isShizukuRunning: Boolean = false,
+    val isShizukuPermissionGranted: Boolean = false
 )
 
 enum class OptimizationStep {
@@ -54,9 +57,16 @@ class OptimizerViewModel : ViewModel() {
 
     private val optimizerEngine = OptimizationEngine()
 
+    private val shizukuPermissionListener = Shizuku.OnRequestPermissionResultListener { _, grantResult ->
+        val granted = grantResult == android.content.pm.PackageManager.PERMISSION_GRANTED
+        _uiState.update { it.copy(isShizukuPermissionGranted = granted) }
+    }
+
     init {
         // Start live system CPU stats monitoring loop
         startStatsMonitor()
+        ShizukuManager.registerListener(shizukuPermissionListener)
+        updateShizukuState()
     }
 
     private fun startStatsMonitor() {
@@ -71,6 +81,31 @@ class OptimizerViewModel : ViewModel() {
         }
     }
 
+    private fun updateShizukuState() {
+        val running = ShizukuManager.isShizukuRunning()
+        val granted = ShizukuManager.isPermissionGranted()
+        _uiState.update { 
+            it.copy(
+                isShizukuRunning = running,
+                isShizukuPermissionGranted = granted
+            )
+        }
+    }
+
+    fun requestShizukuPermission(requestCode: Int = 1001) {
+        ShizukuManager.requestPermission(requestCode)
+    }
+
+    fun restoreHeavyApps(context: Context) {
+        if (!ShizukuManager.isShizukuRunning() || !ShizukuManager.isPermissionGranted()) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(statusText = "Restaurando aplicaciones en segundo plano...") }
+            optimizerEngine.restoreHeavyApps { progress ->
+                _uiState.update { it.copy(statusText = progress) }
+            }
+        }
+    }
+
     /**
      * Updates the UI state with exact, fresh system memory reading.
      */
@@ -79,6 +114,8 @@ class OptimizerViewModel : ViewModel() {
         val cpuVal = optimizerEngine.getCpuUsage()
         val usageGranted = optimizerEngine.isUsageAccessGranted(context)
         val overlayGranted = optimizerEngine.isOverlayPermissionGranted(context)
+        val shizukuRunning = ShizukuManager.isShizukuRunning()
+        val shizukuGranted = ShizukuManager.isPermissionGranted()
         
         _uiState.update { 
             it.copy(
@@ -86,7 +123,9 @@ class OptimizerViewModel : ViewModel() {
                 ramReadable = ramDesc,
                 cpuUsage = cpuVal,
                 isUsagePermissionGranted = usageGranted,
-                isOverlayPermissionGranted = overlayGranted
+                isOverlayPermissionGranted = overlayGranted,
+                isShizukuRunning = shizukuRunning,
+                isShizukuPermissionGranted = shizukuGranted
             )
         }
     }
@@ -207,6 +246,16 @@ class OptimizerViewModel : ViewModel() {
             }
             delay(1000)
 
+            // Integrate Shizuku App Freezing if Shizuku is running and granted
+            if (_uiState.value.isShizukuRunning && _uiState.value.isShizukuPermissionGranted) {
+                _uiState.update { it.copy(statusText = "Localizando apps pesadas en segundo plano...") }
+                delay(600)
+                optimizerEngine.freezeHeavyApps { progress ->
+                    _uiState.update { it.copy(statusText = progress) }
+                }
+                delay(1200)
+            }
+
             // 3. GameMode API Phase
             _uiState.update { 
                 it.copy(
@@ -269,5 +318,6 @@ class OptimizerViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         optimizerEngine.releaseWakeLock()
+        ShizukuManager.unregisterListener(shizukuPermissionListener)
     }
 }

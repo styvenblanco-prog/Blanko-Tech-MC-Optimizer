@@ -11,8 +11,8 @@
     <string name="no_root_banner">⚡ Optimización Segura (No-Root) Activa</string>
     <string name="ram_cleared_format">Se liberó memoria RAM cerrando %1$d procesos.</string>
     <string name="game_mode_active">Modo de Rendimiento del sistema activado.</string>
-    <string name="permission_usage_title">Acceso de Uso Requerido</string>
-    <string name="permission_usage_desc">Para poder escanear y limpiar eficazmente las apps en segundo plano que ralentizan tu dispositivo, necesitamos el permiso de Acceso de Uso.</string>
+    <string name="permission_usage_title">Acceso de Uso (Opcional)</string>
+    <string name="permission_usage_desc">Permite optimizar con precisión extrema. Si no aparece esta app en tu lista (común en Tecno Spark/HiOS), no te preocupes: el optimizador continuará funcionando perfectamente usando los métodos estándar y Shizuku.</string>
     <string name="permission_overlay_title">Permiso de Ventana Flotante</string>
     <string name="permission_overlay_desc">Para mostrar el monitor de RAM/CPU en tiempo real sobre el juego, concede el permiso de superposición.</string>
     <string name="btn_grant_permission">CONCEDER PERMISO</string>

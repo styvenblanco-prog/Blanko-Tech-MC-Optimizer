@@ -76,6 +76,7 @@ class MainActivity : ComponentActivity() {
     // Instantly refresh telemetry and list of apps when user switches back
     viewModel.refreshMemoryStats(this)
     viewModel.loadInstalledApps(this)
+    viewModel.restoreHeavyApps(this)
   }
 }
 
@@ -581,6 +582,118 @@ fun OptimizerScreen(
       modifier = Modifier.fillMaxWidth(),
       verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+      // Shizuku Integration Card
+      if (!uiState.isShizukuRunning) {
+        // Warning: Shizuku service is not running
+        Card(
+          shape = RoundedCornerShape(12.dp),
+          colors = CardDefaults.cardColors(containerColor = Color(0xFF1D0F0F)),
+          border = BorderStroke(1.dp, Color(0xFF6B2020))
+        ) {
+          Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = null,
+                tint = Color(0xFFFA5C5C),
+                modifier = Modifier.size(16.dp)
+              )
+              Spacer(modifier = Modifier.width(8.dp))
+              Text(
+                text = "Shizuku Desconectado",
+                color = Color(0xFFFA5C5C),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+              )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+              text = "Abre la aplicación Shizuku e inicia el servicio por Depuración Inalámbrica para congelar aplicaciones pesadas (WhatsApp, Facebook) y evitar picos de lag.",
+              color = TextSecondary,
+              fontSize = 10.sp,
+              lineHeight = 14.sp
+            )
+          }
+        }
+      } else if (!uiState.isShizukuPermissionGranted) {
+        // Request Permission: Shizuku is running but not authorized
+        Card(
+          shape = RoundedCornerShape(12.dp),
+          colors = CardDefaults.cardColors(containerColor = Color(0xFF0F1E24)),
+          border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f))
+        ) {
+          Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = null,
+                tint = NeonCyan,
+                modifier = Modifier.size(16.dp)
+              )
+              Spacer(modifier = Modifier.width(8.dp))
+              Text(
+                text = "Servicio Shizuku Detectado",
+                color = NeonCyan,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+              )
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+              text = "Shizuku está activo. Concede permisos para permitir que el optimizador suspenda temporalmente los procesos en segundo plano de WhatsApp e Instagram.",
+              color = TextSecondary,
+              fontSize = 10.sp,
+              lineHeight = 14.sp
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Button(
+              onClick = { viewModel.requestShizukuPermission() },
+              modifier = Modifier.fillMaxWidth(),
+              colors = ButtonDefaults.buttonColors(containerColor = NeonCyan, contentColor = DarkBackground),
+              shape = RoundedCornerShape(8.dp),
+              contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+              Text(text = "CONECTAR CON SHIZUKU", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+          }
+        }
+      } else {
+        // Shizuku is running and authorized! Show a beautiful green confirmation badge card!
+        Card(
+          shape = RoundedCornerShape(12.dp),
+          colors = CardDefaults.cardColors(containerColor = Color(0xFF0D1E16)),
+          border = BorderStroke(1.dp, NeonGreen.copy(alpha = 0.4f))
+        ) {
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Icon(
+              imageVector = Icons.Default.Verified,
+              contentDescription = null,
+              tint = NeonGreen,
+              modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+              Text(
+                text = "Shizuku: Conexión Activa",
+                color = NeonGreen,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+              )
+              Text(
+                text = "Congelamiento profundo habilitado para WhatsApp, Facebook e Instagram.",
+                color = TextSecondary,
+                fontSize = 10.sp
+              )
+            }
+          }
+        }
+      }
+
       // Usage stats warning alert
       if (!uiState.isUsagePermissionGranted) {
         Card(
@@ -758,6 +871,14 @@ fun OptimizerScreen(
         isActive = uiState.currentStep.ordinal >= OptimizationStep.RAM_CLEANING.ordinal,
         isCompleted = uiState.currentStep.ordinal > OptimizationStep.RAM_CLEANING.ordinal,
         detailsText = if (uiState.killedProcesses > 0) "${uiState.killedProcesses} cerrados" else null
+      )
+      Spacer(modifier = Modifier.height(10.dp))
+      StepItem(
+        title = "Suspensión de Apps (Shizuku)",
+        icon = Icons.Default.Layers,
+        isActive = uiState.currentStep.ordinal >= OptimizationStep.RAM_CLEANING.ordinal && uiState.isShizukuRunning && uiState.isShizukuPermissionGranted,
+        isCompleted = uiState.currentStep.ordinal > OptimizationStep.RAM_CLEANING.ordinal && uiState.isShizukuRunning && uiState.isShizukuPermissionGranted,
+        detailsText = if (uiState.isShizukuRunning && uiState.isShizukuPermissionGranted) "Activo" else "No disponible"
       )
       Spacer(modifier = Modifier.height(10.dp))
       StepItem(
