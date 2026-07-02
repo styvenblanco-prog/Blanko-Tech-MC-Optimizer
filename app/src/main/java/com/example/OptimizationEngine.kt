@@ -175,7 +175,7 @@ class OptimizationEngine {
                 val availGb = memoryInfo.availMem.toDouble() / (1024 * 1024 * 1024)
                 val usedGb = totalGb - availGb
                 
-                val usedPercent = ((totalGb - memoryInfo.availMem).toFloat() / totalGb * 100).toInt().coerceIn(0, 100)
+                val usedPercent = (((memoryInfo.totalMem - memoryInfo.availMem).toDouble() / memoryInfo.totalMem.toDouble()) * 100).toInt().coerceIn(0, 100)
                 val readable = String.format("%.1f GB / %.1f GB", usedGb, totalGb)
                 
                 Pair(usedPercent, readable)

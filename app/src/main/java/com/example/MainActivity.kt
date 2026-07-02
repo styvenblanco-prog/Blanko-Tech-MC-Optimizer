@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import kotlinx.coroutines.delay
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -112,8 +113,11 @@ fun OptimizerScreen(
 
   // Auto trigger stats refresh inside view context
   LaunchedEffect(Unit) {
-    viewModel.refreshMemoryStats(context)
     viewModel.loadInstalledApps(context)
+    while (true) {
+      viewModel.refreshMemoryStats(context)
+      delay(2000)
+    }
   }
 
   // Error/Permission handler dialogs
