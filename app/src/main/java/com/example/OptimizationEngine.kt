@@ -250,7 +250,7 @@ class OptimizationEngine {
 
     // --- SHIZUKU FREEZE / RESTORE UTILITIES ---
 
-    private val heavyAppsList = listOf(
+    val heavyAppsList = listOf(
         "com.whatsapp",
         "com.facebook.katana",
         "com.instagram.android",
@@ -275,19 +275,36 @@ class OptimizationEngine {
         }
     }
 
+    fun setAppFrozenState(packageName: String, freeze: Boolean): Boolean {
+        return if (freeze) {
+            executeCommand("am force-stop $packageName")
+            executeCommand("pm disable-user --user 0 $packageName")
+        } else {
+            val enabled = executeCommand("pm enable $packageName")
+            executeCommand("cmd appops set $packageName RUN_IN_BACKGROUND allow")
+            executeCommand("am set-standby-bucket $packageName default")
+            enabled
+        }
+    }
+
     suspend fun freezeHeavyApps(onProgress: (String) -> Unit) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             for (pkg in heavyAppsList) {
                 try {
-                    onProgress("Congelando $pkg...")
+                    onProgress("Congelando $pkg con Shizuku...")
                     executeCommand("am force-stop $pkg")
-                    executeCommand("cmd appops set $pkg RUN_IN_BACKGROUND ignore")
-                    executeCommand("am set-standby-bucket $pkg restricted")
+                    val success = executeCommand("pm disable-user --user 0 $pkg")
+                    if (success) {
+                        Log.i("OptimizationEngine", "Successfully frozen $pkg via Shizuku")
+                    } else {
+                        executeCommand("cmd appops set $pkg RUN_IN_BACKGROUND ignore")
+                        executeCommand("am set-standby-bucket $pkg restricted")
+                    }
                 } catch (e: Exception) {
                     Log.e("OptimizationEngine", "Error freezing $pkg: ${e.message}")
                 }
             }
-            onProgress("Aplicaciones pesadas congeladas con Shizuku.")
+            onProgress("Aplicaciones pesadas congeladas con Shizuku de forma persistente.")
         }
     }
 
@@ -296,6 +313,10 @@ class OptimizationEngine {
             for (pkg in heavyAppsList) {
                 try {
                     onProgress("Restaurando $pkg...")
+                    val success = executeCommand("pm enable $pkg")
+                    if (success) {
+                        Log.i("OptimizationEngine", "Successfully restored $pkg via Shizuku")
+                    }
                     executeCommand("cmd appops set $pkg RUN_IN_BACKGROUND allow")
                     executeCommand("am set-standby-bucket $pkg default")
                 } catch (e: Exception) {

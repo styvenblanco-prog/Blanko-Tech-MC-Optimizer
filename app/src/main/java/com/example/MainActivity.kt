@@ -692,6 +692,120 @@ fun OptimizerScreen(
             }
           }
         }
+
+        // Shizuku Freezer Widget
+        val installedFrozenApps = uiState.frozenApps.filter { it.isInstalled }
+        if (installedFrozenApps.isNotEmpty()) {
+          Spacer(modifier = Modifier.height(10.dp))
+          Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkSurface),
+            border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.3f)),
+            modifier = Modifier.fillMaxWidth()
+          ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Icon(
+                    imageVector = Icons.Default.AcUnit,
+                    contentDescription = null,
+                    tint = NeonCyan,
+                    modifier = Modifier.size(20.dp)
+                  )
+                  Spacer(modifier = Modifier.width(10.dp))
+                  Text(
+                    text = "CONGELADOR SHIZUKU",
+                    color = NeonCyan,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp
+                  )
+                }
+                
+                TextButton(
+                  onClick = { viewModel.restoreHeavyApps(context) },
+                  contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                  Text(
+                    text = "DESCONGELAR TODO",
+                    color = NeonGreen,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                  )
+                }
+              }
+              
+              Spacer(modifier = Modifier.height(4.dp))
+              Text(
+                text = "Fuerza la hibernación total para suspender procesos persistentes que consumen ciclos del procesador en segundo plano de forma persistente.",
+                color = TextSecondary,
+                fontSize = 10.sp,
+                lineHeight = 14.sp
+              )
+              
+              Spacer(modifier = Modifier.height(12.dp))
+              
+              Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                installedFrozenApps.forEach { app ->
+                  Row(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .background(DarkBackground, RoundedCornerShape(10.dp))
+                      .border(1.dp, if (app.isFrozen) NeonCyan.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.05f), RoundedCornerShape(10.dp))
+                      .padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                      Box(
+                        modifier = Modifier
+                          .size(8.dp)
+                          .clip(CircleShape)
+                          .background(if (app.isFrozen) NeonCyan else NeonGreen)
+                      )
+                      Spacer(modifier = Modifier.width(10.dp))
+                      Column {
+                        Text(
+                          text = app.label,
+                          color = TextPrimary,
+                          fontSize = 12.sp,
+                          fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                          text = if (app.isFrozen) "Dormido (0% CPU persistente)" else "Activo en segundo plano",
+                          color = if (app.isFrozen) NeonCyan.copy(alpha = 0.8f) else TextSecondary,
+                          fontSize = 9.sp
+                        )
+                      }
+                    }
+                    
+                    Button(
+                      onClick = { viewModel.toggleAppFreeze(context, app.packageName) },
+                      colors = ButtonDefaults.buttonColors(
+                        containerColor = if (app.isFrozen) NeonCyan.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.1f),
+                        contentColor = if (app.isFrozen) NeonCyan else TextPrimary
+                      ),
+                      border = BorderStroke(1.dp, if (app.isFrozen) NeonCyan else Color.White.copy(alpha = 0.15f)),
+                      shape = RoundedCornerShape(6.dp),
+                      contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                      modifier = Modifier.height(28.dp)
+                    ) {
+                      Text(
+                        text = if (app.isFrozen) "REACTIVAR" else "CONGELAR",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.ExtraBold
+                      )
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
 
       // Usage stats warning alert

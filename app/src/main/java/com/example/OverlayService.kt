@@ -48,107 +48,75 @@ class OverlayService : Service() {
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        createFloatingWidget()
-        handler.post(statsUpdater)
+        try {
+            createFloatingWidget()
+            handler.post(statsUpdater)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            stopSelf()
+        }
     }
 
     private fun createFloatingWidget() {
         // Base container FrameLayout
         val frameLayout = FrameLayout(this)
         
-        // Rounded semi-transparent dark container
+        // Simple semi-transparent dark container
         val contentLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dpToPx(12), dpToPx(6), dpToPx(12), dpToPx(6))
+            setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4))
             
-            // Neon border with Slate glass background
             val backgroundDrawable = GradientDrawable().apply {
-                setColor(Color.parseColor("#E60B1216")) // 90% opacity deep dark background
-                cornerRadius = dpToPx(18).toFloat()
-                setStroke(dpToPx(1), Color.parseColor("#3300E6FF")) // Subtle neon-cyan glowing outline
+                setColor(Color.parseColor("#B3000000")) // Simple 70% dark background
+                cornerRadius = dpToPx(6).toFloat()
             }
             background = backgroundDrawable
         }
 
-        // 1. Tiny handle indicator / logo
-        val handleView = TextView(this).apply {
-            text = "⚡"
-            textSize = 12f
-            setPadding(0, 0, dpToPx(6), 0)
-        }
-        contentLayout.addView(handleView)
-
-        // 2. CPU stat
+        // 1. CPU stat
         val tvCpu = TextView(this).apply {
             tag = "overlay_cpu"
             text = "CPU: 0%"
-            textColorHex("#00FF66") // Neon green
+            textColorHex("#FFFFFF")
             textSize = 10f
-            typeface = Typeface.DEFAULT_BOLD
-            setPadding(0, 0, dpToPx(10), 0)
+            typeface = Typeface.MONOSPACE
+            setPadding(0, 0, dpToPx(6), 0)
         }
         contentLayout.addView(tvCpu)
 
         // Divider
         val tvDivider = TextView(this).apply {
             text = "|"
-            textColorHex("#232D34")
+            textColorHex("#66FFFFFF")
             textSize = 10f
-            setPadding(0, 0, dpToPx(10), 0)
+            setPadding(0, 0, dpToPx(6), 0)
         }
         contentLayout.addView(tvDivider)
 
-        // 3. RAM stat
+        // 2. RAM stat
         val tvRam = TextView(this).apply {
             tag = "overlay_ram"
             text = "RAM: 0%"
-            textColorHex("#00E6FF") // Neon cyan
+            textColorHex("#FFFFFF")
             textSize = 10f
-            typeface = Typeface.DEFAULT_BOLD
-            setPadding(0, 0, dpToPx(10), 0)
+            typeface = Typeface.MONOSPACE
+            setPadding(0, 0, dpToPx(8), 0)
         }
         contentLayout.addView(tvRam)
 
-        // 4. Compact Dismiss Button (X)
-        val btnClose = ImageView(this).apply {
-            val xDrawable = GradientDrawable().apply {
-                setColor(Color.parseColor("#33FF0055")) // 20% opacity hot pink
-                cornerRadius = dpToPx(10).toFloat()
-            }
-            background = xDrawable
-            setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
-            
-            contentDescription = "Close Monitor"
-            minimumWidth = dpToPx(18)
-            minimumHeight = dpToPx(18)
-            
-            setOnClickListener {
-                stopSelf()
-            }
-        }
-        
-        // Small helper text close overlay button
-        val tvCloseSymbol = TextView(this).apply {
+        // 3. Simple Close Button (X)
+        val tvClose = TextView(this).apply {
             text = "×"
             textColorHex("#FF3366")
-            textSize = 12f
+            textSize = 14f
             typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-        }
-        
-        val closeContainer = FrameLayout(this).apply {
-            addView(btnClose)
-            addView(tvCloseSymbol, FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                Gravity.CENTER
-            ))
+            setPadding(dpToPx(4), 0, dpToPx(4), 0)
             setOnClickListener {
                 stopSelf()
             }
         }
-        contentLayout.addView(closeContainer, LinearLayout.LayoutParams(dpToPx(18), dpToPx(18)))
+        contentLayout.addView(tvClose)
 
         frameLayout.addView(contentLayout)
         floatingView = frameLayout
@@ -201,7 +169,12 @@ class OverlayService : Service() {
             }
         })
 
-        windowManager.addView(floatingView, params)
+        try {
+            windowManager.addView(floatingView, params)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            stopSelf()
+        }
     }
 
     private fun TextView.textColorHex(hexColor: String) {

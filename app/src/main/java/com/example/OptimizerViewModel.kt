@@ -21,6 +21,13 @@ data class TargetApp(
     val isGame: Boolean
 )
 
+data class FrozenAppState(
+    val packageName: String,
+    val label: String,
+    val isInstalled: Boolean,
+    val isFrozen: Boolean
+)
+
 data class OptimizerUiState(
     val currentStep: OptimizationStep = OptimizationStep.IDLE,
     val statusText: String = "Dispositivo listo para la optimización",
@@ -37,7 +44,8 @@ data class OptimizerUiState(
     val isOverlayPermissionGranted: Boolean = false,
     val isOverlayActive: Boolean = false,
     val isShizukuRunning: Boolean = false,
-    val isShizukuPermissionGranted: Boolean = false
+    val isShizukuPermissionGranted: Boolean = false,
+    val frozenApps: List<FrozenAppState> = emptyList()
 )
 
 enum class OptimizationStep {
@@ -103,6 +111,7 @@ class OptimizerViewModel : ViewModel() {
             optimizerEngine.restoreHeavyApps { progress ->
                 _uiState.update { it.copy(statusText = progress) }
             }
+            refreshFrozenApps(context)
         }
     }
 
@@ -127,6 +136,55 @@ class OptimizerViewModel : ViewModel() {
                 isShizukuRunning = shizukuRunning,
                 isShizukuPermissionGranted = shizukuGranted
             )
+        }
+        refreshFrozenApps(context)
+    }
+
+    fun refreshFrozenApps(context: Context) {
+        val list = listOf(
+            Triple("com.whatsapp", "WhatsApp", "whatsapp"),
+            Triple("com.facebook.katana", "Facebook", "facebook"),
+            Triple("com.instagram.android", "Instagram", "instagram"),
+            Triple("com.android.vending", "Google Play Store", "playstore")
+        )
+        
+        val updated = list.map { (pkg, name, _) ->
+            val isInstalled = isAppInstalled(context, pkg)
+            val isFrozen = if (isInstalled) isAppFrozen(context, pkg) else false
+            FrozenAppState(pkg, name, isInstalled, isFrozen)
+        }
+        _uiState.update { it.copy(frozenApps = updated) }
+    }
+
+    private fun isAppInstalled(context: Context, packageName: String): Boolean {
+        return try {
+            context.packageManager.getApplicationInfo(packageName, android.content.pm.PackageManager.MATCH_DISABLED_COMPONENTS)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun isAppFrozen(context: Context, packageName: String): Boolean {
+        return try {
+            val appInfo = context.packageManager.getApplicationInfo(packageName, android.content.pm.PackageManager.MATCH_DISABLED_COMPONENTS)
+            !appInfo.enabled
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun toggleAppFreeze(context: Context, packageName: String) {
+        if (!ShizukuManager.isShizukuRunning() || !ShizukuManager.isPermissionGranted()) return
+        viewModelScope.launch {
+            val isCurrentlyFrozen = isAppFrozen(context, packageName)
+            val nextState = !isCurrentlyFrozen
+            val success = withContext(Dispatchers.IO) {
+                optimizerEngine.setAppFrozenState(packageName, nextState)
+            }
+            if (success) {
+                refreshFrozenApps(context)
+            }
         }
     }
 
@@ -253,6 +311,7 @@ class OptimizerViewModel : ViewModel() {
                 optimizerEngine.freezeHeavyApps { progress ->
                     _uiState.update { it.copy(statusText = progress) }
                 }
+                refreshFrozenApps(context)
                 delay(1200)
             }
 
