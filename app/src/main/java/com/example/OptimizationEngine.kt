@@ -385,4 +385,40 @@ class OptimizationEngine {
             onProgress("Aplicaciones restauradas con éxito.")
         }
     }
+
+    suspend fun applyExtremeOptimization(context: Context, packageName: String, onProgress: (String) -> Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                // 1. Forzar Modo de Rendimiento de Juego y Desactivar Intervenciones Térmicas
+                onProgress("Desactivando limitaciones térmicas...")
+                executeCommand("cmd game set-mode $packageName performance")
+                executeCommand("cmd game set-gpu $packageName high")
+                executeCommand("settings put global game_driver_all_apps 1")
+                kotlinx.coroutines.delay(400)
+                
+                // 2. Excluir Minecraft y otros juegos de las restricciones de batería y Doze
+                onProgress("Optimizando hilos del juego...")
+                executeCommand("dumpsys deviceidle whitelist +$packageName")
+                executeCommand("cmd appops set $packageName RUN_IN_BACKGROUND allow")
+                kotlinx.coroutines.delay(400)
+
+                // 3. Forzar Renderizado por GPU y desactivar superposiciones de hardware
+                onProgress("Activando renderizado extremo por GPU...")
+                try {
+                    executeCommand("setprop debug.sf.disable_hwc 1")
+                } catch (e: Exception) {
+                    Log.e("OptimizationEngine", "Failed to set hwc prop: ${e.message}")
+                }
+                kotlinx.coroutines.delay(400)
+
+                // 4. Limpiar la caché de Dalvik/ART del juego
+                onProgress("Optimizando E/S de almacenamiento...")
+                executeCommand("pm trim-caches 500M")
+                kotlinx.coroutines.delay(400)
+                
+            } catch (e: Exception) {
+                Log.e("OptimizationEngine", "Error in applyExtremeOptimization: ${e.message}")
+            }
+        }
+    }
 }

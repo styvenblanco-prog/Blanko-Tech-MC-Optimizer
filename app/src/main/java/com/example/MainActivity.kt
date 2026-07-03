@@ -1000,6 +1000,15 @@ fun OptimizerScreen(
         isActive = uiState.currentStep.ordinal >= OptimizationStep.GAMEMODE.ordinal,
         isCompleted = uiState.currentStep.ordinal > OptimizationStep.GAMEMODE.ordinal
       )
+      if (uiState.isShizukuRunning && uiState.isShizukuPermissionGranted) {
+        Spacer(modifier = Modifier.height(10.dp))
+        StepItem(
+          title = "Ajustes Extremos de Rendimiento (Shizuku)",
+          icon = Icons.Default.FlashOn,
+          isActive = uiState.currentStep.ordinal >= OptimizationStep.EXTREME_TWEAKS.ordinal,
+          isCompleted = uiState.currentStep.ordinal > OptimizationStep.EXTREME_TWEAKS.ordinal
+        )
+      }
       Spacer(modifier = Modifier.height(10.dp))
       StepItem(
         title = "Ejecutar ${uiState.selectedApp.label}",

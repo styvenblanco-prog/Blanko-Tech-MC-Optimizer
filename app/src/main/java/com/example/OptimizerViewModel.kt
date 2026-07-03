@@ -53,6 +53,7 @@ enum class OptimizationStep {
     WAKELOCK,
     RAM_CLEANING,
     GAMEMODE,
+    EXTREME_TWEAKS,
     LAUNCHING,
     FINISHED,
     ERROR
@@ -362,6 +363,21 @@ class OptimizerViewModel : ViewModel() {
                 ) 
             }
             delay(1000)
+
+            // Extreme Tweaks Phase (Shizuku)
+            if (_uiState.value.isShizukuRunning && _uiState.value.isShizukuPermissionGranted) {
+                _uiState.update { 
+                    it.copy(
+                        currentStep = OptimizationStep.EXTREME_TWEAKS,
+                        statusText = "Preparando optimizaciones de nivel de sistema..."
+                    )
+                }
+                delay(800)
+                optimizerEngine.applyExtremeOptimization(context, targetApp.packageName) { progress ->
+                    _uiState.update { it.copy(statusText = progress) }
+                }
+                delay(1000)
+            }
 
             // 4. Launching Phase
             _uiState.update { 
