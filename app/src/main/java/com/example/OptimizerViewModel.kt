@@ -108,7 +108,7 @@ class OptimizerViewModel : ViewModel() {
         if (!ShizukuManager.isShizukuRunning() || !ShizukuManager.isPermissionGranted()) return
         viewModelScope.launch {
             _uiState.update { it.copy(statusText = "Restaurando aplicaciones en segundo plano...") }
-            optimizerEngine.restoreHeavyApps { progress ->
+            optimizerEngine.restoreHeavyApps(context) { progress ->
                 _uiState.update { it.copy(statusText = progress) }
             }
             refreshFrozenApps(context)
@@ -143,6 +143,7 @@ class OptimizerViewModel : ViewModel() {
     fun refreshFrozenApps(context: Context) {
         val list = listOf(
             Triple("com.whatsapp", "WhatsApp", "whatsapp"),
+            Triple("com.whatsapp.w4b", "WhatsApp Business", "whatsapp_business"),
             Triple("com.facebook.katana", "Facebook", "facebook"),
             Triple("com.instagram.android", "Instagram", "instagram"),
             Triple("com.android.vending", "Google Play Store", "playstore")
@@ -161,29 +162,58 @@ class OptimizerViewModel : ViewModel() {
             context.packageManager.getApplicationInfo(packageName, android.content.pm.PackageManager.MATCH_DISABLED_COMPONENTS)
             true
         } catch (e: Exception) {
-            false
+            try {
+                context.packageManager.getPackageInfo(packageName, android.content.pm.PackageManager.MATCH_DISABLED_COMPONENTS)
+                true
+            } catch (ex: Exception) {
+                false
+            }
         }
     }
 
     private fun isAppFrozen(context: Context, packageName: String): Boolean {
         return try {
-            val appInfo = context.packageManager.getApplicationInfo(packageName, android.content.pm.PackageManager.MATCH_DISABLED_COMPONENTS)
-            !appInfo.enabled
+            val state = context.packageManager.getApplicationEnabledSetting(packageName)
+            state == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED ||
+                    state == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER ||
+                    state == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED_UNTIL_USED
         } catch (e: Exception) {
-            false
+            try {
+                val appInfo = context.packageManager.getApplicationInfo(packageName, android.content.pm.PackageManager.MATCH_DISABLED_COMPONENTS)
+                !appInfo.enabled
+            } catch (ex: Exception) {
+                false
+            }
         }
     }
 
     fun toggleAppFreeze(context: Context, packageName: String) {
-        if (!ShizukuManager.isShizukuRunning() || !ShizukuManager.isPermissionGranted()) return
+        if (!ShizukuManager.isShizukuRunning()) {
+            _uiState.update { it.copy(statusText = "Error: Shizuku no está activo en segundo plano.") }
+            return
+        }
+        if (!ShizukuManager.isPermissionGranted()) {
+            _uiState.update { it.copy(statusText = "Error: Permiso de Shizuku no concedido.") }
+            requestShizukuPermission()
+            return
+        }
         viewModelScope.launch {
             val isCurrentlyFrozen = isAppFrozen(context, packageName)
             val nextState = !isCurrentlyFrozen
-            val success = withContext(Dispatchers.IO) {
+            _uiState.update { it.copy(statusText = if (nextState) "Congelando $packageName..." else "Descongelando $packageName...") }
+            
+            withContext(Dispatchers.IO) {
                 optimizerEngine.setAppFrozenState(packageName, nextState)
             }
-            if (success) {
-                refreshFrozenApps(context)
+            
+            delay(500)
+            refreshFrozenApps(context)
+            
+            val doubleCheckState = isAppFrozen(context, packageName)
+            if (doubleCheckState == nextState) {
+                _uiState.update { it.copy(statusText = if (nextState) "$packageName congelado con éxito." else "$packageName reactivado con éxito.") }
+            } else {
+                _uiState.update { it.copy(statusText = "Error al congelar/activar $packageName. Verifica el estado de Shizuku.") }
             }
         }
     }
@@ -308,7 +338,7 @@ class OptimizerViewModel : ViewModel() {
             if (_uiState.value.isShizukuRunning && _uiState.value.isShizukuPermissionGranted) {
                 _uiState.update { it.copy(statusText = "Localizando apps pesadas en segundo plano...") }
                 delay(600)
-                optimizerEngine.freezeHeavyApps { progress ->
+                optimizerEngine.freezeHeavyApps(context) { progress ->
                     _uiState.update { it.copy(statusText = progress) }
                 }
                 refreshFrozenApps(context)

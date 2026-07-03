@@ -252,6 +252,7 @@ class OptimizationEngine {
 
     val heavyAppsList = listOf(
         "com.whatsapp",
+        "com.whatsapp.w4b",
         "com.facebook.katana",
         "com.instagram.android",
         "com.android.vending"
@@ -275,6 +276,20 @@ class OptimizationEngine {
         }
     }
 
+    private fun isAppInstalled(context: Context, packageName: String): Boolean {
+        return try {
+            context.packageManager.getApplicationInfo(packageName, android.content.pm.PackageManager.MATCH_DISABLED_COMPONENTS)
+            true
+        } catch (e: Exception) {
+            try {
+                context.packageManager.getPackageInfo(packageName, android.content.pm.PackageManager.MATCH_DISABLED_COMPONENTS)
+                true
+            } catch (ex: Exception) {
+                false
+            }
+        }
+    }
+
     fun setAppFrozenState(packageName: String, freeze: Boolean): Boolean {
         return if (freeze) {
             executeCommand("am force-stop $packageName")
@@ -287,9 +302,10 @@ class OptimizationEngine {
         }
     }
 
-    suspend fun freezeHeavyApps(onProgress: (String) -> Unit) {
+    suspend fun freezeHeavyApps(context: Context, onProgress: (String) -> Unit) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             for (pkg in heavyAppsList) {
+                if (!isAppInstalled(context, pkg)) continue
                 try {
                     onProgress("Congelando $pkg con Shizuku...")
                     executeCommand("am force-stop $pkg")
@@ -308,9 +324,10 @@ class OptimizationEngine {
         }
     }
 
-    suspend fun restoreHeavyApps(onProgress: (String) -> Unit) {
+    suspend fun restoreHeavyApps(context: Context, onProgress: (String) -> Unit) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             for (pkg in heavyAppsList) {
+                if (!isAppInstalled(context, pkg)) continue
                 try {
                     onProgress("Restaurando $pkg...")
                     val success = executeCommand("pm enable $pkg")
