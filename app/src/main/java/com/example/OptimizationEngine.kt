@@ -9,6 +9,7 @@ import android.os.PowerManager
 import android.os.Process
 import android.provider.Settings
 import android.util.Log
+import rikka.shizuku.Shizuku
 
 class OptimizationEngine {
 
@@ -261,17 +262,58 @@ class OptimizationEngine {
     private fun executeCommand(cmd: String): Boolean {
         return try {
             val clazz = Class.forName("rikka.shizuku.Shizuku")
-            val method = clazz.getMethod(
+            val method = clazz.getDeclaredMethod(
                 "newProcess",
                 Array<String>::class.java,
                 Array<String>::class.java,
                 String::class.java
             )
+            method.isAccessible = true
             val process = method.invoke(null, arrayOf("sh", "-c", cmd), null, null) as java.lang.Process
+            
+            // Consume stdout in a background thread to prevent process hanging
+            val outThread = Thread {
+                try {
+                    process.inputStream.use { input ->
+                        val buffer = ByteArray(1024)
+                        while (input.read(buffer) != -1) {
+                            // Discard output
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Ignore stream closure exceptions
+                }
+            }
+            
+            // Consume stderr in a background thread to prevent process hanging
+            val errThread = Thread {
+                try {
+                    process.errorStream.use { error ->
+                        val buffer = ByteArray(1024)
+                        while (error.read(buffer) != -1) {
+                            // Discard error
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Ignore stream closure exceptions
+                }
+            }
+            
+            outThread.start()
+            errThread.start()
+            
             val result = process.waitFor()
+            
+            try {
+                outThread.join(1000)
+                errThread.join(1000)
+            } catch (e: Exception) {
+                // Ignore join interruption
+            }
+            
             result == 0
         } catch (e: Throwable) {
-            Log.e("OptimizationEngine", "Failed to execute shell command '$cmd' via Shizuku reflection: ${e.message}", e)
+            Log.e("OptimizationEngine", "Failed to execute shell command '$cmd' via Shizuku: ${e.message}", e)
             false
         }
     }

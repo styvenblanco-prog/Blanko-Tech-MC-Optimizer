@@ -76,7 +76,6 @@ class MainActivity : ComponentActivity() {
     // Instantly refresh telemetry and list of apps when user switches back
     viewModel.refreshMemoryStats(this)
     viewModel.loadInstalledApps(this)
-    viewModel.restoreHeavyApps(this)
   }
 }
 
